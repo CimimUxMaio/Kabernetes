@@ -15,7 +15,7 @@ def client_running():
 
 
 def check_config(config):
-    if not all(key in ["image", "cpu_target", "constants"] for key in config.keys()):
+    if any(key not in ["image", "cpu_target", "constants"] for key in config.keys()):
         raise BadConfig()
 
 
@@ -46,7 +46,7 @@ def start_client():
     return "Client started"
 
 
-@app.route("/client", methods=["PUT"])
+@app.route("/client", methods=["PATCH"])
 def update_constants():
     if not client_running():
         raise NoClientRunning()

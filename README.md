@@ -62,7 +62,7 @@ De faltar alguno de los atributos ("image", "cpu_target", "constants")
 
 Tambien fallará si ya existe una instancia activa.
 
-3. PUT "/client"
+3. PATCH "/client"
 
 Actualiza los valores de las constantes del controlador de una instancia activa.
 
