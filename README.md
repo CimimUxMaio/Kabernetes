@@ -1,11 +1,11 @@
 # Kabernetes
 
-
 - Importante hacer: `sudo chmod 666 /var/run/docker.sock` antes de correr la app, sino no va a tener permisos para levantar contenedores.
 
 ### How to run
 
 ```
+$pip install -r requirements.txt
 $export FLASK_APP=main.py
 $flask run
 ```
