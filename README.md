@@ -13,7 +13,7 @@ $flask run
 
 ### Endpoints
 
-1. GET "/client/stats"
+1. GET "/client"
 
 Retorna las estadisticas del cliente de docker actual:
 

@@ -24,7 +24,7 @@ def handle_app_error(e):
     return e.message, e.code
 
 
-@app.route("/client/stats")
+@app.route("/client")
 def stats():
     if not client_running():
         raise NoClientRunning()
