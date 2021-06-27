@@ -121,7 +121,7 @@ class Kabernetes(th.Thread):
     def actuator(self, n):
         if n == 0:
             return
-
+        
         if n < 0:
             containers_to_kill = min(abs(n), len(self.container_list) - 1)
             if containers_to_kill is 0:
@@ -144,16 +144,13 @@ class Kabernetes(th.Thread):
 
         self.docker_client.containers.prune()
         print(f"Finished killing {n} containers...")
-
+    
     def calculate_cpu_usage(self, stats):
-        cpu_stats_total_usage = stats["cpu_stats"]["cpu_usage"]["total_usage"]
-        precpu_stats_total_usage = stats["precpu_stats"]["cpu_usage"]["total_usage"]
-                
-        delta_total_usage = (cpu_stats_total_usage - precpu_stats_total_usage)/precpu_stats_total_usage
+        cpu_delta = stats["cpu_stats"]["cpu_usage"]["total_usage"] - stats["precpu_stats"]["cpu_usage"]["total_usage"]
+        system_delta = stats["cpu_stats"]["system_cpu_usage"] - stats["precpu_stats"]["system_cpu_usage"]
 
-        cpu_stats_system_cpu_usage = stats["cpu_stats"]["system_cpu_usage"]
-        precpu_stats_system_cpu_usage = stats["precpu_stats"]["system_cpu_usage"]
+        cpu_usage = 0
+        if cpu_delta > 0 and system_delta > 0:
+            cpu_usage = (cpu_delta / system_delta) * len(stats["cpu_stats"]["cpu_usage"]["percpu_usage"]) * 100
 
-        delta_system_usage = (cpu_stats_system_cpu_usage - precpu_stats_system_cpu_usage)/precpu_stats_system_cpu_usage
-
-        return (delta_total_usage / delta_system_usage) * len(stats["cpu_stats"]["cpu_usage"]["percpu_usage"]) * 100.0
+        return cpu_usage
