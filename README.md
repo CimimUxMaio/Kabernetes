@@ -12,7 +12,7 @@ $python main.py
 
 ### Como terminar la aplicacion
 
-Para terminar la aplicacion primero debemos terminar el cliente de docker actual con `GET /client`. De esta forma, todos los contenedores que esten siendo ejecutados por la aplicacion serán frenados y eliminados.
+Para terminar la aplicacion primero debemos terminar el cliente de docker actual con `DELETE /client`. De esta forma, todos los contenedores que esten siendo ejecutados por la aplicacion serán frenados y eliminados.
 
 De no hacerlo, habrá que frenar y eliminar los contenedores manualmente.
 
