@@ -67,6 +67,13 @@ class Kabernetes(th.Thread):
     def set_constants(self, constants):
         self._constants = constants
 
+    def drop_container(self):
+        if len(self.container_list) > 1:
+            self.kill_containers(1)
+    
+    def push_container(self):
+        self.create_containers(1)
+
 ###
 
     def run(self):

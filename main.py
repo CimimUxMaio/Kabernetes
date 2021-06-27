@@ -68,5 +68,25 @@ def stop_client():
     return "Client deleted"
 
 
+@app.route("/client/containers", methods=["DELETE"])
+def drop_container():
+    if not client_running():
+        raise NoClientRunning()
+
+    global client
+    client.drop_container()
+    return "Container dropped"
+    
+
+@app.route("/client/containers", methods=["POST"])
+def push_container():
+    if not client_running():
+        raise NoClientRunning()
+
+    global client
+    client.push_container()
+    return "Container pushed"
+
+
 if __name__ == '__main__':
     app.run(host=CONFIG["host"], port=CONFIG["port"])

@@ -10,6 +10,12 @@ $export FLASK_APP=main.py
 $python main.py
 ```
 
+### Como terminar la aplicacion
+
+Para terminar la aplicacion primero debemos terminar el cliente de docker actual con `GET /client`. De esta forma, todos los contenedores que esten siendo ejecutados por la aplicacion serán frenados y eliminados.
+
+De no hacerlo, habrá que frenar y eliminar los contenedores manualmente.
+
 
 ### Endpoints
 
@@ -76,3 +82,15 @@ Retornará un error si no existe una instancia activa.
 4. DELETE "/client"
 
 Borra la instancia del cliente de docker actual, dando lugar para la creacion de una nueva con `POST "/client"`.
+
+
+5. POST "/client/containers"
+
+Da de alta un nuevo container en el sistema.
+
+
+6. DELETE "/client/containers"
+
+Da de baja un container del sistema. 
+Si el sistema solo está utilizando 1 unico container, este mensaje no tiene efecto.
+
