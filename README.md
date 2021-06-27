@@ -75,4 +75,4 @@ Retornará un error si no existe una instancia activa.
 
 4. DELETE "/client"
 
-Borra la instancia del cliente de docker actual, dando lugar para la creacion de una nueva con `POST "/cliente"`.
+Borra la instancia del cliente de docker actual, dando lugar para la creacion de una nueva con `POST "/client"`.
