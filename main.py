@@ -15,7 +15,7 @@ def client_running():
 
 
 def check_config(config):
-    if any(key not in ["image", "cpu_target", "constants"] for key in config.keys()):
+    if not bool(config) or not all(key in ["image", "cpu_target", "constants"] for key in config.keys()):
         raise BadConfig()
 
 
