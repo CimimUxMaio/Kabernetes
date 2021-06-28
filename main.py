@@ -7,7 +7,7 @@ from errors import NoClientRunning, ClientAlreadyRunning
 
 
 app = Flask(__name__)
-client = None 
+client: Kabernetes = None 
 
 
 def client_running():
@@ -99,16 +99,20 @@ def drop_containers():
     check_container_amount(amount)
 
     global client
-    client.drop_container(amount)
+    client.kill_containers(amount)
     return "Container dropped"
     
 
 @app.route("/client/containers", methods=["POST"])
 def push_container():
     check_client_not_running() 
+    body = request.json
+    check_dict_for_keys(body, ["amount"])
+    amount = body["amount"]
+    check_container_amount(amount)
 
     global client
-    client.push_container()
+    client.create_containers(amount)
     return "Container pushed"
 
 
