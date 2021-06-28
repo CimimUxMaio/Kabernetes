@@ -67,13 +67,6 @@ class Kabernetes(th.Thread):
     def set_constants(self, constants):
         self._constants = constants
 
-    def drop_container(self):
-        if len(self.container_list) > 1:
-            self.kill_containers(1)
-    
-    def push_container(self):
-        self.create_containers(1)
-
 ###
 
     def run(self):
@@ -123,11 +116,7 @@ class Kabernetes(th.Thread):
             return
         
         if n < 0:
-            containers_to_kill = min(abs(n), len(self.container_list) - 1)
-            if containers_to_kill is 0:
-                return
-
-            self.kill_containers(containers_to_kill)
+            self.kill_containers(n)
         else:
             self.create_containers(n)
 
@@ -138,6 +127,10 @@ class Kabernetes(th.Thread):
         print(f"Finished instantiating {n} containers.")
 
     def kill_containers(self, n):
+        containers_to_kill = min(abs(n), len(self.container_list) - 1)
+        if containers_to_kill == 0:
+            return
+
         print(f"Killing {n} containers...")
         for container in self.container_list[:n]:
             container.kill()

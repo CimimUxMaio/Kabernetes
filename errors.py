@@ -18,6 +18,11 @@ class NoClientRunning(AppError):
         super().__init__("There is no client currently running", HTTPStatus.NOT_FOUND)
 
 
-class BadConfig(AppError):
-    def __init__(self):
-        super().__init__("Bad configuration", HTTPStatus.BAD_REQUEST)
+class WrongBodyFormat(AppError):
+    def __init__(self, attributes):
+        super().__init__(f"Bad body format. Expected: {attributes} attributes.", HTTPStatus.BAD_REQUEST)
+
+
+class NegativeContainerNumber(AppError):
+    def __init__(self, n):
+        super().__init__(f"Expected a positive number of containers, but got {n}", HTTPStatus.BAD_REQUEST)
