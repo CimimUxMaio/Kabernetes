@@ -2,7 +2,7 @@ from flask.json import jsonify
 from config import CONFIG
 from src.kabernetes import Kabernetes
 from flask import Flask, request
-from errors import AppError, NegativeContainerNumber, WrongBodyFormat
+from errors import AppError, NegativeContainerNumber, NumericValue, WrongBodyFormat
 from errors import NoClientRunning, ClientAlreadyRunning
 
 
@@ -12,7 +12,7 @@ client: Kabernetes = None
 
 def client_running():
     global client
-    return client and client.is_alive()
+    return client and client.available()
 
 def check_condition(value, exception_constructor):
     if value:
@@ -44,6 +44,19 @@ def check_client_not_running():
         exception_constructor=lambda: NoClientRunning()
     )
 
+def clean_numeric(name, value):
+    try:
+        return float(value)
+    except ValueError:
+        raise NumericValue(name)
+
+def clean_constants(constants):
+    final = {}
+    for k, v in constants.items():
+        final[k] = clean_numeric(k, v) if v else 0
+    
+    return final
+
 
 @app.errorhandler(AppError)
 def handle_app_error(e):
@@ -65,7 +78,7 @@ def start_client():
     check_config(config)
 
     global client
-    client = Kabernetes(config["image"], config["cpu_target"], { k: float(v) for k, v in config["constants"]})
+    client = Kabernetes(config["image"], clean_numeric("cpu_target", config["cpu_target"]), clean_constants(config["constants"]))
     client.start()
     return "Client started"
 
@@ -74,7 +87,7 @@ def start_client():
 def update_constants():
     check_client_not_running()
 
-    constants = { k: float(v) for k, v in request.json } if request.json else {}
+    constants = clean_constants(request.json) if request.json else {}
     global client
 
     client.set_constants(constants)
