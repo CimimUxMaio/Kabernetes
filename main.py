@@ -65,7 +65,7 @@ def start_client():
     check_config(config)
 
     global client
-    client = Kabernetes(config["image"], config["cpu_target"], config["constants"])
+    client = Kabernetes(config["image"], config["cpu_target"], { k: float(v) for k, v in config["constants"]})
     client.start()
     return "Client started"
 
@@ -74,8 +74,9 @@ def start_client():
 def update_constants():
     check_client_not_running()
 
-    constants = request.json if request.json else {}
+    constants = { k: float(v) for k, v in request.json } if request.json else {}
     global client
+
     client.set_constants(constants)
     return "Constants updated"
 
