@@ -2,27 +2,18 @@ from flask.json import jsonify
 from config import CONFIG
 from src.kabernetes import Kabernetes
 from flask import Flask, request
-from errors import AppError, NegativeContainerNumber, NumericValue, WrongBodyFormat
-from errors import NoClientRunning, ClientAlreadyRunning
+from errors import AppError, ClientNotAvailable, ClientNotInitialized, NegativeContainerNumber, NumericValue, WrongBodyFormat
+from errors import ClientNotInstantiated, ClientAlreadyRunning
 
 
 app = Flask(__name__)
 client: Kabernetes = None 
 
 
-def client_running():
-    global client
-    return client and client.available()
-
-def check_condition(value, exception_constructor):
-    if value:
-        raise exception_constructor()
 
 def check_dict_for_keys(dict_, keys):
-    check_condition(
-        value=not bool(dict_) or not all(key in dict_.keys() for key in keys), 
-        exception_constructor = lambda: WrongBodyFormat(keys)
-    )
+    if not bool(dict_) or not all(key in dict_.keys() for key in keys):
+        raise WrongBodyFormat(keys)
 
 def check_config(config):
     check_dict_for_keys(config, ["image", "cpu_target", "constants"])
@@ -32,17 +23,33 @@ def check_container_amount(amount):
     if amount < 0:
         raise NegativeContainerNumber(amount)
 
-def check_client_running():
-    check_condition(
-        value=client_running(),
-        exception_constructor=lambda: ClientAlreadyRunning()
-    )
+
+def check_client_initialized():
+    global client
+    if not client.is_initialized():
+        raise ClientNotInitialized()
+
+def client_instantiated():
+    global client
+    return bool(client)
+
+def check_client_instantiated():
+    if not client_instantiated():
+        raise ClientNotInstantiated()
+
+
+def check_client_instantiated_and_available():
+    check_client_instantiated()
+
+    global client
+    if not client.is_available():
+        raise ClientNotAvailable()
 
 def check_client_not_running():
-    check_condition(
-        value=not client_running(),
-        exception_constructor=lambda: NoClientRunning()
-    )
+    global client
+    if client and not client.is_dead():
+        raise ClientAlreadyRunning()
+
 
 def clean_numeric(name, value):
     try:
@@ -65,7 +72,8 @@ def handle_app_error(e):
 
 @app.route("/client")
 def stats():
-    check_client_not_running()
+    check_client_instantiated()
+    check_client_initialized()
 
     global client
     return jsonify(client.stats())
@@ -73,7 +81,7 @@ def stats():
 
 @app.route("/client", methods=["POST"])
 def start_client():
-    check_client_running()
+    check_client_not_running()
     config = request.json
     check_config(config)
 
@@ -85,8 +93,7 @@ def start_client():
 
 @app.route("/client", methods=["PATCH"])
 def update_constants():
-    check_client_not_running()
-
+    check_client_instantiated_and_available()
     constants = clean_constants(request.json) if request.json else {}
     global client
 
@@ -96,17 +103,17 @@ def update_constants():
 
 @app.route("/client", methods=["DELETE"])
 def stop_client():
-    check_client_not_running()
+    check_client_instantiated_and_available()
 
     global client
-    client.end()
+    client.signal_end()
     client.join()
     return "Client deleted"
 
 
 @app.route("/client/containers", methods=["DELETE"])
 def drop_containers():
-    check_client_not_running()
+    check_client_instantiated_and_available()
     body = request.json
     check_dict_for_keys(body, ["amount"])
     amount = body["amount"]
@@ -119,7 +126,7 @@ def drop_containers():
 
 @app.route("/client/containers", methods=["POST"])
 def push_container():
-    check_client_not_running() 
+    check_client_instantiated_and_available()
     body = request.json
     check_dict_for_keys(body, ["amount"])
     amount = body["amount"]

@@ -7,15 +7,24 @@ class AppError(Exception):
         self.code = code
         self.message = message
 
+class ClientNotInitialized(AppError):
+    def __init__(self):
+        super().__init__("Client not fully initialized, try again", HTTPStatus.SERVICE_UNAVAILABLE)
+
 
 class ClientAlreadyRunning(AppError):
     def __init__(self):
         super().__init__("There is already a client running", HTTPStatus.CONFLICT)
 
 
-class NoClientRunning(AppError):
+class ClientNotInstantiated(AppError):
     def __init__(self):
-        super().__init__("There is no client currently running or the current client is not available.", HTTPStatus.NOT_FOUND)
+        super().__init__("There is no client instantiated", HTTPStatus.NOT_FOUND)
+
+
+class ClientNotAvailable(AppError):
+    def __init__(self):
+        super().__init__("Client not available, try again later", HTTPStatus.SERVICE_UNAVAILABLE)
 
 
 class WrongBodyFormat(AppError):

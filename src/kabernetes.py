@@ -1,6 +1,14 @@
 import math
 import threading as th
 import docker
+import enum
+
+class Status(enum.Enum):
+    STARTING = 'STARTING'
+    STOPPING = 'STOPPING'
+    READY = 'READY'
+    BUSY = 'BUSY'
+    DEAD = 'DEAD'
 
 
 class Kabernetes(th.Thread):
@@ -16,7 +24,7 @@ class Kabernetes(th.Thread):
         self._error_acum = 0
         self._end = False
         self._available = False
-
+        self._status = Status.STARTING
 
     @property
     def kp(self):
@@ -33,6 +41,10 @@ class Kabernetes(th.Thread):
     @property
     def container_list(self):
         return self.docker_client.containers.list()
+    
+    @property
+    def status(self):
+        return self._status
 
     def container_stats(self):
         return [ container.stats(stream=False) for container in self.container_list ]
@@ -44,11 +56,15 @@ class Kabernetes(th.Thread):
         return self.feedback() - self.cpu_target
 
     def feedback(self):
+        if self.is_dead():
+            return 0
+
         total_cpu_usage = sum(self.cpu_usage())
         return total_cpu_usage / len(self.container_list)
 
     def stats(self):
         return {
+            "status": self.status.value,
             "image": self.image,
             "cpu_target": self.cpu_target, 
             "constants": {
@@ -61,15 +77,21 @@ class Kabernetes(th.Thread):
             "containers": len(self.container_list),
             "cpu_usage": self.cpu_usage()
         }
-
-    def end(self):
+    
+    def signal_end(self):
         self._end = True
+
+    def is_dead(self):
+        return not self.is_alive() or self.status == Status.DEAD
 
     def set_constants(self, constants):
         self._constants = constants
     
-    def available(self):
-        return self.is_alive() and self._available
+    def is_available(self):
+        return self.is_alive() and self.status == Status.READY
+    
+    def is_initialized(self):
+        return not self.status == Status.STARTING 
 
 ###
 
@@ -81,25 +103,29 @@ class Kabernetes(th.Thread):
     def initialize(self):
         print("Initializing...")
 
-        self.docker_client.containers.run(self.image, detach=True)
-        self._available = True
+        self.create_containers(1)
+        while len(self.container_list) < 1:
+            pass
 
+        self._status = Status.READY
         print("Client started")
 
     def close(self):
         print("Closing...")
 
-        self._available = False
+        self._status = Status.STOPPING
         for container in self.container_list:
             container.kill()
 
         self.docker_client.containers.prune()
+        self._status = Status.DEAD
 
         print("Client closed")
 
     def main(self):
         while not self._end:
-            n = self.controler(self.error())
+            error = self.error()
+            n = self.controler(error)
             self.actuator(n)
 
     def error_change(self, current):
@@ -128,8 +154,14 @@ class Kabernetes(th.Thread):
 
     def create_containers(self, n):
         print(f"Instantiating {n} containers...")
+        self._status = Status.BUSY
+        print("Before: ", len(self.container_list))
+
         for i in range(n):
             self.docker_client.containers.run(self.image, detach=True)
+        
+        print("After: ", len(self.container_list))
+        self._status = Status.READY
         print(f"Finished instantiating {n} containers.")
 
     def kill_containers(self, n):
@@ -138,13 +170,18 @@ class Kabernetes(th.Thread):
             return
 
         print(f"Killing {n} containers...")
+        self._status = Status.BUSY
         for container in self.container_list[:n]:
             container.kill()
 
         self.docker_client.containers.prune()
+        self._status = Status.READY
         print(f"Finished killing {n} containers...")
     
     def calculate_cpu_usage(self, stats):
+        if self.is_dead():
+            return 0
+
         cpu_delta = stats["cpu_stats"]["cpu_usage"]["total_usage"] - stats["precpu_stats"]["cpu_usage"]["total_usage"]
         system_delta = stats["cpu_stats"]["system_cpu_usage"] - stats["precpu_stats"]["system_cpu_usage"]
 
