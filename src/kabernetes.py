@@ -20,11 +20,15 @@ class Kabernetes(th.Thread):
         self.docker_client = docker.from_env()
 
         self._constants = constants
-        self._last_error = 0
         self._error_acum = 0
         self._end = False
         self._available = False
         self._status = Status.STARTING
+
+        self._calculated_feedback = 0
+        self._calculated_cpu_usage = []
+        self._calculated_error = self._calculated_feedback - self.cpu_target
+        self._last_error =  self._calculated_error
 
     @property
     def kp(self):
@@ -50,17 +54,20 @@ class Kabernetes(th.Thread):
         return [ container.stats(stream=False) for container in self.container_list ]
 
     def cpu_usage(self):
-        return [ self.calculate_cpu_usage(stats) for stats in self.container_stats() ]
+        self._calculated_cpu_usage = [ self.calculate_cpu_usage(stats) for stats in self.container_stats() ]
+        return self._calculated_cpu_usage
 
     def error(self):
-        return self.feedback() - self.cpu_target
+        self._calculated_error = self.feedback() - self.cpu_target
+        return self._calculated_error
 
     def feedback(self):
         if self.is_dead():
             return 0
 
         total_cpu_usage = sum(self.cpu_usage())
-        return total_cpu_usage / len(self.container_list)
+        self._calculated_feedback = total_cpu_usage / len(self.container_list)
+        return self._calculated_feedback
 
     def stats(self):
         return {
@@ -72,10 +79,10 @@ class Kabernetes(th.Thread):
                 "kd": self.kd, 
                 "ki": self.ki 
             },
-            "error": self.error(),
-            "avg_cpu_usage": self.feedback(),
+            "error": self._calculated_error if not self.is_dead() else -self.cpu_target,
+            "avg_cpu_usage": self._calculated_feedback if not self.is_dead() else 0,
             "containers": len(self.container_list),
-            "cpu_usage": self.cpu_usage()
+            "cpu_usage": self._calculated_cpu_usage if not self.is_dead() else []
         }
     
     def signal_end(self):
@@ -124,20 +131,18 @@ class Kabernetes(th.Thread):
 
     def main(self):
         while not self._end:
-            error = self.error()
-            n = self.controler(error)
+            n = self.controler()
             self.actuator(n)
-
-    def error_change(self, current):
-        return current - self._last_error
 
     def error_acum(self):
         return self._error_acum
 
-    def controler(self, error):
+    def controler(self):
+        previous_error = self._calculated_error
+        error = self.error()
         self._error_acum += error
 
-        change = self.error_change(error)
+        change = previous_error - error
         integral = self.error_acum()
 
         gain = self.kp * error + self.kd * change + self.ki * integral
@@ -165,6 +170,7 @@ class Kabernetes(th.Thread):
         print(f"Finished instantiating {n} containers.")
 
     def kill_containers(self, n):
+        print("n:", n, '\t', "containers:", len(self.container_list) - 1)
         containers_to_kill = min(abs(n), len(self.container_list) - 1)
         if containers_to_kill == 0:
             return
