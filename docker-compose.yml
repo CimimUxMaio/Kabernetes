@@ -1,0 +1,13 @@
+services:
+    docker:
+        image: "dind_mongo"
+        privileged: true
+
+    kabernetes:
+        build: .
+        ports:
+            - "5000:8080"
+        links: 
+            - docker
+        environment: 
+            DOCKER_HOST: https://docker:2376
