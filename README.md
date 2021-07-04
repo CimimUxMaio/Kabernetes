@@ -6,7 +6,6 @@
 
 ```
 $pip install -r requirements.txt
-$export FLASK_APP=main.py
 $python main.py
 ```
 
@@ -25,6 +24,7 @@ Retorna las estadisticas del cliente de docker actual:
 
 ```
 {
+    "status", // Estado del cliente (STARTING, READY, STOPPING, BUSY, DEAD)
     "image" // Imagen que se va a utilizar para instanciar los contenedores 
     "cpu_target" // Porcentaje de cpu promedio que se quiere tener como maximo en el sistema 
     "constants": { // Default 0
