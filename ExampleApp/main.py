@@ -11,8 +11,8 @@ def resource():
     for _ in range(COMPLEXITY):
         pass
 
-    return f"Resource obtained from proces {os.getpid()}"
+    return f"Resource obtained."
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="localhost", port=4000)

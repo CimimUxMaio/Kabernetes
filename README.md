@@ -86,11 +86,24 @@ Borra la instancia del cliente de docker actual, dando lugar para la creacion de
 
 5. POST "/client/containers"
 
-Da de alta un nuevo container en el sistema.
+Da de alta una dada cantidad de contenedores nuevos en el sistema.
+
+Recibe por body un JSON con el siguiente formato:
+```
+{
+    "amount"  // Indica la cantidad de contenedores a dar de alta
+}
+```
 
 
 6. DELETE "/client/containers"
 
-Da de baja un container del sistema. 
-Si el sistema solo está utilizando 1 unico container, este mensaje no tiene efecto.
+Da de baja una dada cantidad de contenedores del sistema. 
+El sistema nunca podrá tener menos de 1 contenedor corriendo.
 
+Recibe por body un JSON con el siguiente formato:
+```
+{
+    "amount"  // Indica la cantidad de contenedores a dar de baja
+}
+```
