@@ -49,6 +49,10 @@ class Kabernetes(th.Thread):
     @property
     def status(self):
         return self._status
+    
+    @property
+    def container_amount(self):
+        return len(self.container_list)
 
     def container_stats(self):
         return [ container.stats(stream=False) for container in self.container_list ]
@@ -66,7 +70,7 @@ class Kabernetes(th.Thread):
             return 0
 
         total_cpu_usage = sum(self.cpu_usage())
-        self._calculated_feedback = total_cpu_usage / len(self.container_list)
+        self._calculated_feedback = total_cpu_usage / self.container_amount
         return self._calculated_feedback
 
     def stats(self):
@@ -81,7 +85,7 @@ class Kabernetes(th.Thread):
             },
             "error": self._calculated_error if not self.is_dead() else -self.cpu_target,
             "avg_cpu_usage": self._calculated_feedback if not self.is_dead() else 0,
-            "containers": len(self.container_list),
+            "containers": self.container_amount,
             "cpu_usage": self._calculated_cpu_usage if not self.is_dead() else []
         }
     
@@ -111,8 +115,8 @@ class Kabernetes(th.Thread):
         print("Initializing...")
 
         self.create_containers(1)
-        while len(self.container_list) < 1:
-            pass
+        #while self.container_list < 1:
+        #    pass
 
         self._status = Status.READY
         print("Client started")
@@ -131,13 +135,13 @@ class Kabernetes(th.Thread):
 
     def main(self):
         while not self._end:
-            n = self.controler()
+            n = self.controller()
             self.actuator(n)
 
     def error_acum(self):
         return self._error_acum
 
-    def controler(self):
+    def controller(self):
         previous_error = self._calculated_error
         error = self.error()
         self._error_acum += error
@@ -160,18 +164,18 @@ class Kabernetes(th.Thread):
     def create_containers(self, n):
         print(f"Instantiating {n} containers...")
         self._status = Status.BUSY
-        print("Before: ", len(self.container_list))
+        print("Before: ", self.container_amount)
 
         for i in range(n):
             self.docker_client.containers.run(self.image, detach=True)
         
-        print("After: ", len(self.container_list))
+        print("After: ", self.container_amount)
         self._status = Status.READY
         print(f"Finished instantiating {n} containers.")
 
     def kill_containers(self, n):
-        print("n:", n, '\t', "containers:", len(self.container_list) - 1)
-        containers_to_kill = min(abs(n), len(self.container_list) - 1)
+        print("n:", n, '\t', "containers:", self.container_amount - 1)
+        containers_to_kill = min(abs(n), self.container_amount - 1)
         if containers_to_kill == 0:
             return
 

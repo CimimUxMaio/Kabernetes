@@ -40,3 +40,8 @@ class NegativeContainerNumber(AppError):
 class NumericValue(AppError):
     def __init__(self, name):
         super().__init__(f"{name} must be of a numeric type")
+
+
+class NotEnoughContainers(AppError):
+    def __init__(self):
+        super().__init__("There is not enough containers to drop. The minimum active container amount is 1.", HTTPStatus.BAD_REQUEST)

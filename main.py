@@ -2,7 +2,7 @@ from flask.json import jsonify
 from config import CONFIG
 from src.kabernetes import Kabernetes
 from flask import Flask, request
-from errors import AppError, ClientNotAvailable, ClientNotInitialized, NegativeContainerNumber, NumericValue, WrongBodyFormat
+from errors import AppError, ClientNotAvailable, ClientNotInitialized, NegativeContainerNumber, NotEnoughContainers, NumericValue, WrongBodyFormat
 from errors import ClientNotInstantiated, ClientAlreadyRunning
 
 
@@ -49,7 +49,6 @@ def check_client_not_running():
     global client
     if client and not client.is_dead():
         raise ClientAlreadyRunning()
-
 
 def clean_numeric(name, value):
     try:
@@ -116,10 +115,13 @@ def drop_containers():
     check_client_instantiated_and_available()
     body = request.json
     check_dict_for_keys(body, ["amount"])
-    amount = body["amount"]
+    amount = int(clean_numeric("amount", body["amount"])) 
     check_container_amount(amount)
 
     global client
+    if client.container_amount - 1 < amount:
+        raise NotEnoughContainers()
+
     client.kill_containers(amount)
     return "Container dropped"
     
@@ -129,7 +131,7 @@ def push_container():
     check_client_instantiated_and_available()
     body = request.json
     check_dict_for_keys(body, ["amount"])
-    amount = body["amount"]
+    amount = int(clean_numeric("amount", body["amount"])) 
     check_container_amount(amount)
 
     global client
