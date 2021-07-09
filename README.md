@@ -5,8 +5,10 @@
 ### How to run
 
 ```
-$pip install -r requirements.txt
-$python main.py
+$ python -m venv my-project-env
+$ source my-project-env/bin/activate
+$ pip install -r requirements.txt
+$ python main.py
 ```
 
 ### Como terminar la aplicacion
