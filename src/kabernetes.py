@@ -1,7 +1,9 @@
+import enum
 import math
 import threading as th
+
 import docker
-import enum
+
 
 class Status(enum.Enum):
     STARTING = 'STARTING'
@@ -28,37 +30,37 @@ class Kabernetes(th.Thread):
         self._calculated_feedback = 0
         self._calculated_cpu_usage = []
         self._calculated_error = self._calculated_feedback - self.cpu_target
-        self._last_error =  self._calculated_error
+        self._last_error = self._calculated_error
 
     @property
     def kp(self):
         return self._constants.get("kp", 0)
-    
+
     @property
     def kd(self):
         return self._constants.get("kd", 0)
-    
+
     @property
     def ki(self):
         return self._constants.get("ki", 0)
-    
+
     @property
     def container_list(self):
         return self.docker_client.containers.list()
-    
+
     @property
     def status(self):
         return self._status
-    
+
     @property
     def container_amount(self):
         return len(self.container_list)
 
     def container_stats(self):
-        return [ container.stats(stream=False) for container in self.container_list ]
+        return [container.stats(stream=False) for container in self.container_list]
 
     def cpu_usage(self):
-        self._calculated_cpu_usage = [ self.calculate_cpu_usage(stats) for stats in self.container_stats() ]
+        self._calculated_cpu_usage = [self.calculate_cpu_usage(stats) for stats in self.container_stats()]
         return self._calculated_cpu_usage
 
     def error(self):
@@ -77,18 +79,18 @@ class Kabernetes(th.Thread):
         return {
             "status": self.status.value,
             "image": self.image,
-            "cpu_target": self.cpu_target, 
+            "cpu_target": self.cpu_target,
             "constants": {
-                "kp": self.kp, 
-                "kd": self.kd, 
-                "ki": self.ki 
+                "kp": self.kp,
+                "kd": self.kd,
+                "ki": self.ki
             },
             "error": self._calculated_error if not self.is_dead() else -self.cpu_target,
             "avg_cpu_usage": self._calculated_feedback if not self.is_dead() else 0,
             "containers": self.container_amount,
             "cpu_usage": self._calculated_cpu_usage if not self.is_dead() else []
         }
-    
+
     def signal_end(self):
         self._end = True
 
@@ -97,14 +99,14 @@ class Kabernetes(th.Thread):
 
     def set_constants(self, constants):
         self._constants = constants
-    
+
     def is_available(self):
         return self.is_alive() and self.status == Status.READY
-    
-    def is_initialized(self):
-        return not self.status == Status.STARTING 
 
-###
+    def is_initialized(self):
+        return not self.status == Status.STARTING
+
+    ###
 
     def run(self):
         self.initialize()
@@ -115,7 +117,7 @@ class Kabernetes(th.Thread):
         print("Initializing...")
 
         self.create_containers(1)
-        #while self.container_list < 1:
+        # while self.container_list < 1:
         #    pass
 
         self._status = Status.READY
@@ -155,7 +157,7 @@ class Kabernetes(th.Thread):
     def actuator(self, n):
         if n == 0:
             return
-        
+
         if n < 0:
             self.kill_containers(-n)
         else:
@@ -167,27 +169,29 @@ class Kabernetes(th.Thread):
         print("Before: ", self.container_amount)
 
         for i in range(n):
-            self.docker_client.containers.run(self.image, detach=True)
-        
+            self.docker_client.containers.run(self.image, detach=True, ports={'5000/tcp': None})
+
         print("After: ", self.container_amount)
         self._status = Status.READY
         print(f"Finished instantiating {n} containers.")
 
     def kill_containers(self, n):
-        print("n:", n, '\t', "containers:", self.container_amount - 1)
+        print("n:", n, '\t', "containers:", self.container_amount)
         containers_to_kill = min(abs(n), self.container_amount - 1)
+        #si la cantidad que hay que bajar es mayor o igual a la cantidad de contenedores, dejame solo 1 contenedor corriendo
         if containers_to_kill == 0:
-            return
+            # containers_to_kill
+            return  # TODO fijarse que siempre quede un container levantado
 
-        print(f"Killing {n} containers...")
+        print(f"Killing {containers_to_kill} containers...")
         self._status = Status.BUSY
-        for container in self.container_list[:n]:
+        for container in self.container_list[:containers_to_kill]:
             container.kill()
 
         self.docker_client.containers.prune()
         self._status = Status.READY
-        print(f"Finished killing {n} containers...")
-    
+        print(f"Finished killing {containers_to_kill} containers...")
+
     def calculate_cpu_usage(self, stats):
         if self.is_dead():
             return 0

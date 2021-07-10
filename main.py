@@ -1,19 +1,20 @@
-from flask.json import jsonify
-from config import CONFIG
-from src.kabernetes import Kabernetes
 from flask import Flask, request
-from errors import AppError, ClientNotAvailable, ClientNotInitialized, NegativeContainerNumber, NotEnoughContainers, NumericValue, WrongBodyFormat
-from errors import ClientNotInstantiated, ClientAlreadyRunning
+from flask.json import jsonify
 
+from config import CONFIG
+from errors import AppError, ClientNotAvailable, ClientNotInitialized, NegativeContainerNumber, NotEnoughContainers, \
+    NumericValue, WrongBodyFormat
+from errors import ClientNotInstantiated, ClientAlreadyRunning
+from src.kabernetes import Kabernetes
 
 app = Flask(__name__)
-client: Kabernetes = None 
-
+client: Kabernetes = None
 
 
 def check_dict_for_keys(dict_, keys):
     if not bool(dict_) or not all(key in dict_.keys() for key in keys):
         raise WrongBodyFormat(keys)
+
 
 def check_config(config):
     check_dict_for_keys(config, ["image", "cpu_target", "constants"])
@@ -29,9 +30,11 @@ def check_client_initialized():
     if not client.is_initialized():
         raise ClientNotInitialized()
 
+
 def client_instantiated():
     global client
     return bool(client)
+
 
 def check_client_instantiated():
     if not client_instantiated():
@@ -45,10 +48,12 @@ def check_client_instantiated_and_available():
     if not client.is_available():
         raise ClientNotAvailable()
 
+
 def check_client_not_running():
     global client
     if client and not client.is_dead():
         raise ClientAlreadyRunning()
+
 
 def clean_numeric(name, value):
     try:
@@ -56,11 +61,12 @@ def clean_numeric(name, value):
     except ValueError:
         raise NumericValue(name)
 
+
 def clean_constants(constants):
     final = {}
     for k, v in constants.items():
         final[k] = clean_numeric(k, v) if v else 0
-    
+
     return final
 
 
@@ -85,7 +91,8 @@ def start_client():
     check_config(config)
 
     global client
-    client = Kabernetes(config["image"], clean_numeric("cpu_target", config["cpu_target"]), clean_constants(config["constants"]))
+    client = Kabernetes(config["image"], clean_numeric("cpu_target", config["cpu_target"]),
+                        clean_constants(config["constants"]))
     client.start()
     return "Client started"
 
@@ -115,23 +122,23 @@ def drop_containers():
     check_client_instantiated_and_available()
     body = request.json
     check_dict_for_keys(body, ["amount"])
-    amount = int(clean_numeric("amount", body["amount"])) 
+    amount = int(clean_numeric("amount", body["amount"]))
     check_container_amount(amount)
 
     global client
-    if client.container_amount - 1 < amount:
+    if (client.container_amount - amount) <= 0:  # client.container_amount - 1 < amount:
         raise NotEnoughContainers()
 
     client.kill_containers(amount)
     return "Container dropped"
-    
+
 
 @app.route("/client/containers", methods=["POST"])
 def push_container():
     check_client_instantiated_and_available()
     body = request.json
     check_dict_for_keys(body, ["amount"])
-    amount = int(clean_numeric("amount", body["amount"])) 
+    amount = int(clean_numeric("amount", body["amount"]))
     check_container_amount(amount)
 
     global client
