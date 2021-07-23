@@ -150,8 +150,10 @@ class Kabernetes(th.Thread):
 
         change = previous_error - error
         integral = self.error_acum()
-
-        gain = self.kp * error + self.kd * change + self.ki * integral
+        
+        MAX_ABS_N = 4  # Simula una banda proporcional
+        proportional_gain = self.kp * error 
+        gain =  math.copysign(min(MAX_ABS_N, abs(proportional_gain)), proportional_gain) + self.kd * change + self.ki * integral
         return math.ceil(gain)
 
     def actuator(self, n):
